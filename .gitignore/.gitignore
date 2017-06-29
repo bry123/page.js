@@ -1,0 +1,222 @@
+
+$.fn.extend({
+    "initPage":function(listCount,currentPage,fun){
+        var maxshowpageitem = $(this).attr("maxshowpageitem");
+        if(maxshowpageitem!=null&&maxshowpageitem>0&&maxshowpageitem!=""){
+            page.maxshowpageitem = maxshowpageitem;
+        }
+        var pagelistcount = $(this).attr("pagelistcount");
+        if(pagelistcount!=null&&pagelistcount>0&&pagelistcount!=""){
+            page.pagelistcount = pagelistcount;
+        }
+
+        var pageId = $(this).attr("id");
+        page.pageId=pageId;
+        if(listCount<0){
+            listCount = 0;
+        }
+        if(currentPage<=0){
+            currentPage=1;
+        }
+        page.setPageListCount(pageId,listCount,currentPage,fun);
+
+    }
+});
+var  page = {
+    "maxshowpageitem":5,//最多显示的页码个数
+    "pagelistcount":10,//每一页显示的内容条数
+    /**
+     * 初始化分页界面
+     * @param listCount 列表总量
+     */
+    "initWithUl":function(pageId,listCount,currentPage){
+
+        var pageCount = 1;
+        if(listCount>0){
+            var pageCount = listCount%page.pagelistcount>0?parseInt(listCount/page.pagelistcount)+1:parseInt(listCount/page.pagelistcount);
+            page.pageCount2 = pageCount;
+        }
+        var appendStr = page.getPageListModel(pageCount,currentPage);
+        $("#"+pageId).html(appendStr);
+    },
+    /**
+     * 设置列表总量和当前页码
+     * @param listCount 列表总量
+     * @param currentPage 当前页码
+     */
+    "setPageListCount":function(pageId,listCount,currentPage,fun){
+        listCount = parseInt(listCount);
+        currentPage = parseInt(currentPage);
+        page.initWithUl(pageId,listCount,currentPage);
+        page.initPageEvent(pageId,listCount,fun);
+        if(typeof fun == "function"){
+            fun(currentPage);
+        }
+    },
+    "initPageEvent":function(pageId,listCount,fun){
+        $("#"+pageId +">li[class='pageItem']").on("click",function(){
+            page.setPageListCount(pageId,listCount,$(this).attr("page-data"),fun);
+        });
+        $('.skipToBtnPage').unbind('click').bind('click',function(){
+        	var nubmer=$('.skipto').val();
+			var re = /^[1-9]+[0-9]*]*$/;
+			if (re.test(nubmer)) {
+				if(parseInt(nubmer) <= page.pageCount2){
+				    page.setPageListCount(pageId,listCount,nubmer,fun);
+				}else{
+				    $('.skipto').val('');
+				}
+			}else{
+			    $('.skipto').val('');
+			}
+        })
+//		$('.skipto').blur(function(){
+//			var nubmer=$(this).val();
+//			var re = /^[0-9]+.?[0-9]*$/;
+//	　　    if (re.test(nubmer)) {
+//	　　    	  if(parseInt(nubmer) <= page.pageCount2){
+//	　　    		  page.setPageListCount(pageId,listCount,nubmer,fun);
+//	　　    	  }else{
+//	　　    		  $(this).val('');
+//	　　    	  }
+//		   }else{
+//	　　    		  $(this).val('');
+//	　　    }
+//			
+//		});
+    },
+    "getPageListModel":function(pageCount,currentPage){
+        var prePage = currentPage-1;
+        var nextPage = currentPage+1;
+        var prePageClass ="pageItem";
+        var nextPageClass = "pageItem";
+        if(prePage<=0){
+            prePageClass="pageItemDisable";
+        }
+        if(nextPage>pageCount){
+            nextPageClass="pageItemDisable";
+        }
+        var appendStr ="";
+        
+        //appendStr+="<li class='"+prePageClass+"' page-data='1' page-rel='firstpage'>首页</li>";
+        //appendStr+="<li class='"+prePageClass+"' page-data='"+prePage+"' page-rel='prepage'>&lt;上一页</li>";
+        appendStr+="<li style='color:#d2d2d2;font-size:18px;background: #fff;border: none;margin: 2px 10px 0 0;width: 10px;' class='"+prePageClass+"' page-data='"+prePage+"' page-rel='prepage'><</li>";
+        var miniPageNumber = 1;
+        if(currentPage-parseInt(page.maxshowpageitem/2)>0&&currentPage+parseInt(page.maxshowpageitem/2)<=pageCount){
+            miniPageNumber = currentPage-parseInt(page.maxshowpageitem/2);
+        }else if(currentPage-parseInt(page.maxshowpageitem/2)>0&&currentPage+parseInt(page.maxshowpageitem/2)>pageCount){
+            miniPageNumber = pageCount-page.maxshowpageitem+1;
+            if(miniPageNumber<=0){
+                miniPageNumber=1;
+            }
+        }
+        var showPageNum = parseInt(page.maxshowpageitem);
+        if(pageCount<showPageNum){
+            showPageNum = pageCount
+        }
+        
+        //判断什么时候显示出来首尾页
+        var appendFirst = false, appendEnd = false;
+        if(miniPageNumber > 1){
+        	appendFirst = true;
+        }
+        if((miniPageNumber - 1 + showPageNum) < pageCount){
+        	appendEnd = true;
+        }
+        //带省略号的首页
+        if(appendFirst){
+        	appendStr+="<li class='pageItem' page-data='1'>1</li><span class='pageItem-ellipsis'>...</span>";
+        }
+        
+        //循环显示页数
+        for(var i=0;i<showPageNum;i++){
+            var pageNumber = miniPageNumber++;
+            var itemPageClass = "pageItem";
+            if(pageNumber==currentPage){
+                itemPageClass = "pageItemActive";
+            }
+
+            appendStr+="<li class='"+itemPageClass+"' page-data='"+pageNumber+"' page-rel='itempage'>"+pageNumber+"</li>";
+            
+        }
+        //带省略号的尾页
+        if(appendEnd){
+        	appendStr+="<span class='pageItem-ellipsis'>...</span><li class='pageItem' page-data='"+pageCount+"'>"+pageCount+"</li>";
+        }
+        appendStr+="<li style='color:#d2d2d2;font-size:18px;background: #fff;border: none;margin-top: 2px;margin-right:15px;width: 10px;padding-left: 0px;' class='"+nextPageClass+"' page-data='"+nextPage+"' page-rel='nextpage'>></li>";
+        //appendStr+="<li class='"+nextPageClass+"' page-data='"+nextPage+"' page-rel='nextpage'>下一页&gt;</li>";
+        //appendStr+="<li class='"+nextPageClass+"' page-data='"+pageCount+"' page-rel='lastpage'>尾页</li>";
+		appendStr+='<li style="margin-top: 5px;height: 22px;">跳转到:<input type="text" class="skipto" style="border:1px solid #d2d2d2;border-radius:2px;width: 24px; height: 24px;margin-left: 5px"/>'
+			+'<div class="skipToBtnPage">跳转</div>'
+			+'</li>';
+       return appendStr;
+
+    }
+}
+
+
+
+
+
+
+
+
+
+
+.page{
+    list-style: none;
+}
+.page>li{
+    float: left;
+    padding: 1px 8px;
+    cursor: pointer;
+    border-radius:2px;
+}
+.page .pageItem{
+    border: solid thin #d2d2d2;
+    margin: 5px;
+}
+.page .pageItemActive{
+    border: solid thin #0099FF;
+    margin: 5px;
+    background-color: #0099FF;
+    color:white;
+}
+.page .pageItem:hover{
+    border: solid thin #0099FF;
+    background-color: #0099FF;
+    color:white;
+}
+.page .pageItemDisable{
+    border: solid thin #DDDDDD;
+    margin: 5px;
+    background-color: #DDDDDD;
+}
+.skipto{
+	font-size: 10px;
+}
+.skipToBtnPage{
+	width: 40px;
+    height: 24px;
+    border-radius: 4px;
+    color: #fff;
+    font-size: 12px;
+    background: #0099FF;
+    line-height: 24px;
+    text-align: center;
+    display: inline-block;
+    margin-left: 20px;
+}
+.pageItem-ellipsis{
+	float: left;
+    padding: 1px 8px;
+    margin-top: 3px;
+}
+
+
+
+调用方法
+ $("#page-active").initPage(totalNum,1,function(pageNum){
+				  that._settings.pageNum = pageNum;
+				  that.tableAssignment_week(that.getPageDataByPageNum(data,pageNum));
+			  });
